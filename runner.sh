@@ -6,6 +6,8 @@ export TIME="/usr/bin/time -v"
 export PYTHONMALLOC=malloc
 export G_SLICE=always-malloc
 
+mkdir -p bin dumps
+
 function massif() {
     name="$1"
     cmd="$2"
@@ -63,13 +65,13 @@ function massif() {
     --alloc-fn=xrealloc \
     --alloc-fn=xstrdup \
     --alloc-fn=xzalloc \
-    --massif-out-file="massif.out.${name}.bin" \
+    --massif-out-file="dumps/massif.out.${name}.bin" \
    ${cmd} 2>/dev/null
 }
 
 
-go build fetch.go
-massif fetch_go ./fetch
+go build -o bin/fetch_go fetch.go
+massif fetch_go ./bin/fetch_go
 
 find . -name \*.pyc -delete
 massif fetch_py "python -B fetch.py"
@@ -81,6 +83,7 @@ mv fetch.pyc fetch_compiled.pyc
 massif fetch_compiled_py "python -B fetch_compiled.pyc"
 
 massif fetch_requests.py "python -B fetch_requests.py"
+massif fetch_aiohttp.py "python -B fetch_aiohttp.py"
 
 python -m compileall -b -q fetch_requests.py
 mv fetch_requests.pyc fetch_requests_compiled.pyc
