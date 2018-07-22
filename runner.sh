@@ -6,6 +6,7 @@ export TIME="/usr/bin/time -v"
 export PYTHONMALLOC=malloc
 export G_SLICE=always-malloc
 
+rm -rf bin
 mkdir -p bin dumps
 
 function massif() {
@@ -70,27 +71,37 @@ function massif() {
 }
 
 
-go build -o bin/fetch_go fetch.go
+go build -o bin/fetch_go ./src/fetch.go
 massif fetch_go ./bin/fetch_go
 
+gcc ./src/fetch.c -lcurl -o bin/fetch_c
+massif fetch_c ./bin/fetch_c
+
+g++ ./src/fetch.cpp -lcurl -o bin/fetch_cpp
+massif fetch_cpp ./bin/fetch_cpp
+
 find . -name \*.pyc -delete
-massif fetch_py "python -B fetch.py"
-massif fetch_py_O "python -B -O fetch.py"
-massif fetch_py_OO "python -B -OO fetch.py"
+massif fetch_py "python -B ./src/fetch.py"
+massif fetch_py_O "python -B -O ./src/fetch.py"
+massif fetch_py_OO "python -B -OO ./src/fetch.py"
 
-python -m compileall -b -q fetch.py
-mv fetch.pyc fetch_compiled.pyc
-massif fetch_compiled_py "python -B fetch_compiled.pyc"
+python -m compileall -b -q ./src/fetch.py
+massif fetch_compiled_py "python ./src/fetch.pyc"
 
-massif fetch_requests.py "python -B fetch_requests.py"
-massif fetch_aiohttp.py "python -B fetch_aiohttp.py"
+massif fetch_requests.py "python -B ./src/fetch_requests.py"
+massif fetch_aiohttp.py "python -B ./src/fetch_aiohttp.py"
 
-python -m compileall -b -q fetch_requests.py
-mv fetch_requests.pyc fetch_requests_compiled.pyc
-massif fetch_requests_compiled_py "python -B fetch_requests_compiled.pyc"
+#massif fetch.micro.py "micropython fetch.micro.py"
 
-massif fetch.lua "lua fetch.lua"
-massif fetch.js "node fetch.js"
+massif fetch.lua "lua ./src/fetch.lua"
+massif fetch.js "node ./src/fetch.js"
 
+pushd src/fetch_rs
+cargo build --release --quiet
+mv ./target/release/fetch_rs ../../bin/
+popd
+massif fetch.rs "./bin/fetch_rs"
+
+#massif fetch.pl "perl ./src/fetch.pl"
 
 # sudo systemd-run --scope  --unit limit-test.scope -p MemoryAccounting=true -p MemorySwapMax=1 -p MemoryMax='10M' ./fetch
